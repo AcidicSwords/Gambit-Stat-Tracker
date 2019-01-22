@@ -36,7 +36,7 @@ Further augmentations will: analyze the data, build team totals, calculate playe
 
 This project code is open source but I'd also like to say the project ideas are open source. I would love not only code contributions but idea contribution as well. If you know of any excellent frameworks or libraries that would synergize please contribute those. 
 
-The project has an admirable goal and building career stats will be a computational nightmare as pulling the data will take hundreds of requests with a lot of missed requests (can pull 250 games at time but if there are not 250 you have to backtrack and request a different number until requesting one doesnt return anything, then you have to do that for all characters). I personally want to tackle this challenge providing we build or find an architecture to support it. 
+The project has an admirable goal and building career stats will be a computational nightmare as pulling the data will take hundreds of requests with a lot of missed requests (can pull 250 games at time but if there are not 250 you have to backtrack and request a different number until requesting one doesnt return anything, then you have to do that for all characters). I personally want to tackle this challenge providing we build or find an architecture to support it. The other idea would be to implement leaderboards but this relies on the successful creation of a database with an adequate number of users. **At this time we will not attempt to re-engineer every Gambit game played**
 
 **Thanks For reading**
 
