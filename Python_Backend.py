@@ -13,6 +13,7 @@ class RequestHandler:
 		self.characters = self.getCharacterList()
 		self.matchId = self.getMatchId()
 		self.unformattedPGCR = self.getUnformattedPGCR()
+		self.formattedPGCR = self.returnFormattedPGCR()
 
 
 	def getPlayerId(self):
@@ -261,4 +262,4 @@ class CalculateTeamTotals:
 
 
 newrequest = RequestHandler("AcidicSwords#1316",4)
-print(newrequest.returnFormattedPGCR())
+print(newrequest.formattedPGCR)
