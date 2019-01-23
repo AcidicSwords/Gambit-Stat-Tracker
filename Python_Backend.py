@@ -1,4 +1,3 @@
-#details in commit comments
 import json
 import urllib
 import requests
@@ -49,10 +48,6 @@ class RequestHandler:
 		return formattedPGCR
 
 
-
-
-
-
 class PGCR_Formatter:
 
 	def __init__(self,unformattedPGCR):
@@ -79,19 +74,26 @@ class PGCR_Formatter:
 	def getMatchDetails(self):
 		formattedMatchData = {
 		"date": self.unformattedPGCR["Response"]["period"],
-		"score": self.rawTeamData[0]["score"]["basic"]["displayValue"]+"-"+self.rawTeamData[1]["score"]["basic"]["displayValue"],
-		"rounds": self.rawTeamData[0]["score"]["basic"]["value"] + self.rawTeamData[1]["score"]["basic"]["value"]
+		"score": { 17:self.rawTeamData[0]["score"]["basic"]["displayValue"], 18:self.rawTeamData[1]["score"]["basic"]["displayValue"]},
+		"rounds": self.rawTeamData[0]["score"]["basic"]["value"] + self.rawTeamData[1]["score"]["basic"]["value"],
+		"winningTeam": self.getWinningTeam()
 
 		}
 		return formattedMatchData
 
+	def getWinningTeam(self):
+		if self.rawTeamData[0]["score"]["basic"]["value"] == 2:
+			return 17
+		else:
+			return 18
+
 	def getTeamDetails(self):
-		formattedTeams = {"teamOne":[],"teamTwo":[]}
+		formattedTeams = {17:[],18:[]}
 		for player in range(len(self.formattedPlayerData)):
 			if self.formattedPlayerData[player]["playerInfo"]["team"] == 17 and self.formattedPlayerData[player]["playerInfo"]["finishedMatch"] == 1:
-				formattedTeams["teamOne"].append(self.formattedPlayerData[player])
+				formattedTeams[17].append(self.formattedPlayerData[player])
 			elif self.formattedPlayerData[player]["playerInfo"]["team"] == 18 and self.formattedPlayerData[player]["playerInfo"]["finishedMatch"] == 1:
-				formattedTeams["teamTwo"].append(self.formattedPlayerData[player])
+				formattedTeams[18].append(self.formattedPlayerData[player])
 		return formattedTeams
 
 	def getPlayerDetails(self):
@@ -128,13 +130,14 @@ class PGCR_Formatter:
 	def getEfficiencyStats(self,playerNumber):
 		efficiencyStats = {
 		"assists": self.rawPlayerData[playerNumber]["values"]["assists"]["basic"]["value"],
-		"kills": self.rawPlayerData[playerNumber]["values"]["opponentsDefeated"]["basic"]["value"],
+		"allKills": self.rawPlayerData[playerNumber]["values"]["opponentsDefeated"]["basic"]["value"],
 		"deaths": self.rawPlayerData[playerNumber]["values"]["deaths"]["basic"]["value"],
 		"K/D" : self.rawPlayerData[playerNumber]["values"]["killsDeathsRatio"]["basic"]["value"],
 		"K/D/A" : self.rawPlayerData[playerNumber]["values"]["killsDeathsAssists"]["basic"]["value"],
 		"pveKills":self.rawPlayerData[playerNumber]["extended"]["values"]["mobKills"]["basic"]["value"]
 
 		}
+		efficiencyStats["individualEfficiencyScore"] = efficiencyStats["pveKills"] - efficiencyStats["deaths"]
 		return efficiencyStats
 
 	def getMoteStats(self,playerNumber):
@@ -145,6 +148,7 @@ class PGCR_Formatter:
 		"lost":  self.rawPlayerData[playerNumber]["extended"]["values"]["motesLost"]["basic"]["value"]
 
 		}
+		moteStats["individualMoteScore"] = moteStats["deposited"] + moteStats["denied"] - moteStats["lost"]
 		return moteStats
 
 	def getBlockerStats(self,playerNumber):
@@ -155,6 +159,7 @@ class PGCR_Formatter:
 		"blockersKilled":  self.rawPlayerData[playerNumber]["extended"]["values"]["blockerKills"]["basic"]["value"]
 
 		}
+		blockerStats["individualBlockerScore"] = blockerStats["smallBlockersSent"] + blockerStats["mediumBlockersSent"] + blockerStats["largeBlockersSent"] + blockerStats["blockersKilled"]
 		return blockerStats
 
 	def getInvasionStats(self,playerNumber):
@@ -166,6 +171,7 @@ class PGCR_Formatter:
 		"invaderKills":self.rawPlayerData[playerNumber]["extended"]["values"]["invaderKills"]["basic"]["value"]
 
 		}
+		invasionStats["individualInvasionScore"] = invasionStats["invasions"] + invasionStats["invasionKills"] + invasionStats["invaderKills"] - invasionStats["deathsWhileInvading"] - invasionStats["deathsToInvaders"]
 		return invasionStats
 
 	def getPrimevalStats(self,playerNumber):
@@ -174,7 +180,11 @@ class PGCR_Formatter:
 		"primevalHealing":self.rawPlayerData[playerNumber]["extended"]["values"]["primevalHealing"]["basic"]["value"]
 
 		}
+		primevalStats["individualPrimevalScore"] = primevalStats["primevalDamage"]/1000000 + primevalStats["primevalHealing"]
 		return primevalStats
+
+
+
 class CalculateTeamTotals:
 
 	def __init__(self,intermediatePGCR):
@@ -188,77 +198,76 @@ class CalculateTeamTotals:
 		return PGCR_WithTotals
 
 	def getTeamTotals(self):
-		self.intermediatePGCR["teams"]["teamOneTotals"] = {
-		"totalledMoteStats": self.totalMoteStats("teamOne"),
-		"totalledBlockerStats": self.totalBlockerStats("teamOne"),
-		"totalledInvasionStats": self.totalInvasionStats("teamOne"),
-		"totalledPrimevalStats": self.totalPrimevalStats("teamOne"),
-		"totalledKillDeathStats": self.totalKillDeathStats("teamOne")
+		self.intermediatePGCR["teams"]["team17Totals"] = {
+		"teamMoteStats": self.totalMoteStats(17),
+		"teamBlockerStats": self.totalBlockerStats(17),
+		"teamInvasionStats": self.totalInvasionStats(17),
+		"teamPrimevalStats": self.totalPrimevalStats(17),
+		"teamEfficiencyStats": self.totalEfficiencyStats(17)
 		}
-		self.intermediatePGCR["teams"]["teamTwoTotals"] = {
-		"totalledMoteStats": self.totalMoteStats("teamTwo"),
-		"totalledBlockerStats": self.totalBlockerStats("teamTwo"),
-		"totalledInvasionStats": self.totalInvasionStats("teamTwo"),
-		"totalledPrimevalStats": self.totalPrimevalStats("teamTwo"),
-		"totalledKillDeathStats": self.totalKillDeathStats("teamTwo")
+		self.intermediatePGCR["teams"]["team18Totals"] = {
+		"teamMoteStats": self.totalMoteStats(18),
+		"teamBlockerStats": self.totalBlockerStats(18),
+		"teamInvasionStats": self.totalInvasionStats(18),
+		"teamPrimevalStats": self.totalPrimevalStats(18),
+		"teamEfficiencyStats": self.totalEfficiencyStats(18)
 		}
 
 	def totalMoteStats(self,teamName):
-		totalledMoteStats = {"totalMoteScore": 0, "totalCollected": 0, "totalDeposited":0,"totalDenied":0,"totalLost":0 }
+		teamMoteStats = {"teamMoteScore": 0, "teamCollected": 0, "teamDeposited":0,"teamDenied":0,"teamLost":0 }
 		for player in range(len(self.intermediatePGCR["teams"][teamName])):
-			totalledMoteStats["totalCollected"] += self.intermediatePGCR["teams"][teamName][player]["moteStats"]["collected"]
-			totalledMoteStats["totalDeposited"] += self.intermediatePGCR["teams"][teamName][player]["moteStats"]["deposited"]
-			totalledMoteStats["totalDenied"] += self.intermediatePGCR["teams"][teamName][player]["moteStats"]["denied"]
-			totalledMoteStats["totalLost"] +=self.intermediatePGCR["teams"][teamName][player]["moteStats"]["lost"]
+			teamMoteStats["teamDeposited"] += self.intermediatePGCR["teams"][teamName][player]["moteStats"]["deposited"]
+			teamMoteStats["teamDenied"] += self.intermediatePGCR["teams"][teamName][player]["moteStats"]["denied"]
+			teamMoteStats["teamLost"] +=self.intermediatePGCR["teams"][teamName][player]["moteStats"]["lost"]
 
-		totalledMoteStats["totalMoteScore"] = totalledMoteStats["totalCollected"] + totalledMoteStats["totalDeposited"] + totalledMoteStats["totalDenied"] - totalledMoteStats["totalLost"]
+		teamMoteStats["teamMoteScore"] = teamMoteStats["teamDeposited"] + teamMoteStats["teamDenied"] - teamMoteStats["teamLost"]
 
-		return totalledMoteStats
+		return teamMoteStats
 
 	def totalBlockerStats(self,teamName):
-		totalledBlockerStats = {"totalBlockerScore": 0, "totalSmallBlockersSent": 0, "totalMediumBlockersSent":0,"totalLargeBlockersSent":0,"totalBlockersKilled":0 }
+		teamBlockerStats = {"teamBlockerScore": 0, "teamSmallBlockersSent": 0, "teamMediumBlockersSent":0,"teamLargeBlockersSent":0,"teamBlockersKilled":0 }
 		for player in range(len(self.intermediatePGCR["teams"][teamName])):
-			totalledBlockerStats["totalSmallBlockersSent"] +=self.intermediatePGCR["teams"][teamName][player]["blockerStats"]["smallBlockersSent"]
-			totalledBlockerStats["totalMediumBlockersSent"] +=self.intermediatePGCR["teams"][teamName][player]["blockerStats"]["mediumBlockersSent"]
-			totalledBlockerStats["totalLargeBlockersSent"] +=self.intermediatePGCR["teams"][teamName][player]["blockerStats"]["largeBlockersSent"]
-			totalledBlockerStats["totalBlockersKilled"] +=self.intermediatePGCR["teams"][teamName][player]["blockerStats"]["blockersKilled"]
+			teamBlockerStats["teamSmallBlockersSent"] +=self.intermediatePGCR["teams"][teamName][player]["blockerStats"]["smallBlockersSent"]
+			teamBlockerStats["teamMediumBlockersSent"] +=self.intermediatePGCR["teams"][teamName][player]["blockerStats"]["mediumBlockersSent"]
+			teamBlockerStats["teamLargeBlockersSent"] +=self.intermediatePGCR["teams"][teamName][player]["blockerStats"]["largeBlockersSent"]
+			teamBlockerStats["teamBlockersKilled"] +=self.intermediatePGCR["teams"][teamName][player]["blockerStats"]["blockersKilled"]
 
-		totalledBlockerStats["totalBlockerScore"] = totalledBlockerStats["totalSmallBlockersSent"] + totalledBlockerStats["totalMediumBlockersSent"] + totalledBlockerStats["totalLargeBlockersSent"] + totalledBlockerStats["totalBlockersKilled"]
+		teamBlockerStats["teamteamBlockerScore"] = teamBlockerStats["teamSmallBlockersSent"] + teamBlockerStats["teamMediumBlockersSent"] + teamBlockerStats["teamLargeBlockersSent"] + teamBlockerStats["teamBlockersKilled"]
 
-		return totalledBlockerStats
+		return teamBlockerStats
 
 	def totalInvasionStats(self,teamName):
-		totalledInvasionStats = {"totalInvasionScore": 0, "totalInvasions": 0, "totalInvasionKills":0,"totalDeathsWhileInvading":0,"totalDeathsToInvaders":0,"totalInvaderKills":0 }
+		teamInvasionStats = {"teamInvasionScore": 0, "teamInvasions": 0, "teamInvasionKills":0,"teamDeathsWhileInvading":0,"teamDeathsToInvaders":0,"teamInvaderKills":0 }
 		for player in range(len(self.intermediatePGCR["teams"][teamName])):
-			totalledInvasionStats["totalInvasions"]+= self.intermediatePGCR["teams"][teamName][player]["invasionStats"]["invasions"]
-			totalledInvasionStats["totalInvasionKills"] += self.intermediatePGCR["teams"][teamName][player]["invasionStats"]["invasionKills"]
-			totalledInvasionStats["totalDeathsWhileInvading"] += self.intermediatePGCR["teams"][teamName][player]["invasionStats"]["deathsWhileInvading"]
-			totalledInvasionStats["totalDeathsToInvaders"] += self.intermediatePGCR["teams"][teamName][player]["invasionStats"]["deathsToInvaders"]
-			totalledInvasionStats["totalInvaderKills"] += self.intermediatePGCR["teams"][teamName][player]["invasionStats"]["invaderKills"]
+			teamInvasionStats["teamInvasions"]+= self.intermediatePGCR["teams"][teamName][player]["invasionStats"]["invasions"]
+			teamInvasionStats["teamInvasionKills"] += self.intermediatePGCR["teams"][teamName][player]["invasionStats"]["invasionKills"]
+			teamInvasionStats["teamDeathsWhileInvading"] += self.intermediatePGCR["teams"][teamName][player]["invasionStats"]["deathsWhileInvading"]
+			teamInvasionStats["teamDeathsToInvaders"] += self.intermediatePGCR["teams"][teamName][player]["invasionStats"]["deathsToInvaders"]
+			teamInvasionStats["teamInvaderKills"] += self.intermediatePGCR["teams"][teamName][player]["invasionStats"]["invaderKills"]
 
-		totalledInvasionStats["totalInvasionScore"] = totalledInvasionStats["totalInvasions"] + totalledInvasionStats["totalInvasionKills"] + totalledInvasionStats["totalInvaderKills"] - totalledInvasionStats["totalDeathsWhileInvading"] - totalledInvasionStats["totalDeathsToInvaders"]
+		teamInvasionStats["teamInvasionScore"] = teamInvasionStats["teamInvasions"] + teamInvasionStats["teamInvasionKills"] + teamInvasionStats["teamInvaderKills"] - teamInvasionStats["teamDeathsWhileInvading"] - teamInvasionStats["teamDeathsToInvaders"]
 
-		return totalledInvasionStats
+		return teamInvasionStats
 
 	def totalPrimevalStats(self,teamName):
-		totalledPrimevalStats = {"totalPrimevalScore":0,"totalPrimevalDamage":0,"totalPrimevalHealing":0}
+		teamPrimevalStats = {"teamPrimevalScore":0,"teamPrimevalDamage":0,"teamPrimevalHealing":0}
 		for player in range(len(self.intermediatePGCR["teams"][teamName])):
-			totalledPrimevalStats["totalPrimevalDamage"] += self.intermediatePGCR["teams"][teamName][player]["primevalStats"]["primevalDamage"]
-			totalledPrimevalStats["totalPrimevalHealing"] += self.intermediatePGCR["teams"][teamName][player]["primevalStats"]["primevalHealing"]
+			teamPrimevalStats["teamPrimevalDamage"] += self.intermediatePGCR["teams"][teamName][player]["primevalStats"]["primevalDamage"]
+			teamPrimevalStats["teamPrimevalHealing"] += self.intermediatePGCR["teams"][teamName][player]["primevalStats"]["primevalHealing"]
 
-		totalledPrimevalStats["totalPrimevalScore"] = totalledPrimevalStats["totalPrimevalDamage"]/1000000 + totalledPrimevalStats["totalPrimevalHealing"]
+		teamPrimevalStats["teamPrimevalScore"] = teamPrimevalStats["teamPrimevalDamage"]/1000000 + teamPrimevalStats["teamPrimevalHealing"]
 
-		return totalledPrimevalStats
+		return teamPrimevalStats
 
-	def totalKillDeathStats(self,teamName):
-		totalledKillDeathStats = {"totalKillDeathScore":0,"totalPveKills":0,"totalDeaths":0}
+	def totalEfficiencyStats(self,teamName):
+		teamEfficiencyStats = {"teamEfficiencyScore":0,"teamPveKills":0,"teamDeaths":0}
 		for player in range(len(self.intermediatePGCR["teams"][teamName])):
-			totalledKillDeathStats["totalPveKills"] += self.intermediatePGCR["teams"][teamName][player]["efficiencyStats"]["pveKills"]
-			totalledKillDeathStats["totalDeaths"] += self.intermediatePGCR["teams"][teamName][player]["efficiencyStats"]["deaths"]
+			teamEfficiencyStats["teamPveKills"] += self.intermediatePGCR["teams"][teamName][player]["efficiencyStats"]["pveKills"]
+			teamEfficiencyStats["teamDeaths"] += self.intermediatePGCR["teams"][teamName][player]["efficiencyStats"]["deaths"]
 
-		totalledKillDeathStats["totalKillDeathScore"] = totalledKillDeathStats["totalPveKills"] - totalledKillDeathStats["totalDeaths"]
+		teamEfficiencyStats["teamEfficiencyEfficiencyScore"] = teamEfficiencyStats["teamPveKills"] - teamEfficiencyStats["teamDeaths"]
 
-		return totalledKillDeathStats
+		return teamEfficiencyStats
 
 
 
