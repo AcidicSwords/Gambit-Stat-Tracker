@@ -69,6 +69,7 @@ class NewRequest:
 
 			return False
 
+
 #This method contains the main logic for game retrieval. The main idea is to attempt getting the most games per request.
 #if the remaining games in the character's activity list are 100+ it pulls 100
 #if the remaining games are less than 100 it pulls 10 and finally if the remaining games are less than 10 it pulls 1
@@ -96,7 +97,7 @@ class NewRequest:
 				#the variables page and count are query parameters to the api and are responsible for tracking games processed and ensuring that every game is pulled without missing one
 					page += 1
 
-				elif count >= 1:
+				elif count > 1:
 
 					count /= 10
 					page *= 10
@@ -106,13 +107,8 @@ class NewRequest:
 					status = False
 		#formatting of the gamelist ordered by date in json format for databasing
 		gameList = {"gameList":sorted(gameList,key=itemgetter(0),reverse=True)}
-		gameList = json.dumps(gameList)
 
 		return gameList
 
-#simple test to ensure the script functions 
+#simple test to ensure the script functions
 print(NewRequest("AcidicSwords#1316",4).requestingPlayerGameList)
-
-
-
-
