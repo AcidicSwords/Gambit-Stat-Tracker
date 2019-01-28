@@ -1,4 +1,56 @@
-def buildTeamContribution(self,PGCR_DataFrame):
+import numpy as np
+import pandas as pd
+#my other file that handles getting a full game list for the player
+import BungieRequestHandler
+
+
+
+#file for doing all the ugly work, this class will take an unformatted PostGameCarnageReport and build a Pandas dataframe structure that contains each player's data and performance vs the team.
+class PGCR_Scraper:
+
+#initialization of class will immediatly begin the process to get the data frame
+	def __init__(self,postGameCarnageReportToScrape):
+
+		self.rawPlayerData = postGameCarnageReportToScrape["Response"]["entries"]
+		self.PGCR_DataFrame = self.buildPGCR_DataFrame()
+
+#the main logic loop, this loop will call functions to build each player's stats and then call the function to get the team totals
+	def buildPGCR_DataFrame(self):
+
+		PGCR_DataFrame = []
+		#by making sure each player has completed the match we ensure we don't get more than 8 players
+		for player in range(len(self.rawPlayerData)):
+			
+			if self.rawPlayerData[player]["values"]["completed"]["basic"]["value"] == 1:
+
+				PGCR_DataFrame.append(self.buildPlayerDataFrame(player))
+
+		PGCR_DataFrame = pd.concat(PGCR_DataFrame)
+		PGCR_DataFrame.set_index([("playerInfo","gameResult"),("playerInfo","name")],inplace = True)
+		PGCR_DataFrame.sort_index(inplace = True)
+		PGCR_DataFrame = self.buildTeamContribution(PGCR_DataFrame)
+
+		return PGCR_DataFrame
+
+#this is the main logic loop for building the player stats, this will combine Dataframes that hold each stat group and return the complete stats for a player.
+	def buildPlayerDataFrame(self,player):
+
+		playerDataFrame = pd.concat([
+			self.buildPlayerInfo(player),
+			self.buildEfficiencyStats(player),
+			self.buildKillBreakdown(player),
+			self.buildMoteStats(player),
+			self.buildBlockerStats(player),
+			self.buildInvasionStats(player),
+			self.buildPrimevalStats(player),
+			],axis = 1)
+
+		return playerDataFrame
+
+#complex method to add and compute a category called %Vsteam to the original dataframe. The outer loop builds each Player dataframe and adds it to the bigger dataframe
+#and the inner loop calculates the stats and adds it to a list that the outer loop uses
+#final part combines everything
+	def buildTeamContribution(self,PGCR_DataFrame):
 
 		columns = [["percentVsTeam"],list(PGCR_DataFrame.loc[:,"individual"].columns.values)]
 		index = pd.MultiIndex.from_product(columns, names=["CATEGORY","STATS"])
